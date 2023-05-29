@@ -1,0 +1,55 @@
+import requests
+from bs4 import BeautifulSoup
+
+def scrape_offerup(query, price_range):
+    """Scrape Offerup for listings that match the given query and price range.
+
+    Args:
+        query: The search query.
+        price_range: The price range.
+
+    Returns:
+        A list of dictionaries, where each dictionary contains the following information:
+            * product_name: The name of the product.
+            * price: The price of the product.
+            * seller_name: The name of the seller.
+            * seller_location: The location of the seller.
+    """
+
+    # Make the request to Offerup.
+    response = requests.get(f"https://offerup.com/search?q={query}&price_range={price_range}")
+
+    # Parse the response as HTML.
+    soup = BeautifulSoup(response.content, "html.parser")
+
+    # Find all of the product listings.
+    listings = soup.find_all("div", class_="listing-card")
+
+    # Extract the information from each listing.
+    results = []
+    for listing in listings:
+        product_name = listing.find("a", class_="listing-card__title").text
+        price = listing.find("span", class_="listing-card__price").text
+        seller_name = listing.find("a", class_="listing-card__seller-name").text
+        seller_location = listing.find("span", class_="listing-card__location").text
+
+        results.append({
+            "product_name": product_name,
+            "price": price,
+            "seller_name": seller_name,
+            "seller_location": seller_location,
+        })
+
+    return results
+
+# Scrape the data for road bikes in South Florida.
+results = scrape_offerup("road bikes", "$500-$1000")
+
+# Save the results to a Google Spreadsheet.
+spreadsheet = openpyxl.load_workbook("offerup.xlsx")
+sheet = spreadsheet.active
+
+for result in results:
+    row = sheet.append_row([result["product_name"], result["price"], result["seller_name"], result["seller_location"]])
+
+spreadsheet.save("offerup.xlsx")
